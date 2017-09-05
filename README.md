@@ -19,41 +19,45 @@ If we want to predict the massratio from the gravitational wave, then the final 
 If we want to predict masses of two black holes from the gravitational wave, then the final two layers are the linear layer with the kernal shaped [64,2] and a Relu layer.
 A loss function is required to compute the error after each iteration by measuring how close the outputs are with respect to the target values. Here we choose the mean squared error function for the predictor and the standard cross entropy loss for the classifier.
 
-Here are some samples of networks I've tried.
+  Here are some samples of networks I've tried.
 
-1)CNNClassifier.
-In this network I add batch normalization layer before each activation functions. The accuracy increases a little bit but not much. The network becomes unstable especially when testing with low SNR signals. 
+  1)CNNClassifier.
+  In this network I add batch normalization layer before each activation functions. The accuracy increases a little bit but not much.     The network becomes unstable especially when testing with low SNR signals. 
 
-2)CNNClassifier1.0.
-In this network I replace all Relu layers with Elu layers. The difference between Relu and Elu layers is that when input x<0, elu(x)=a(exp(x)-1) while relu(x)=0. The network is better than the original one in accuracy and stability.
+  2)CNNClassifier1.0.
+  In this network I replace all Relu layers with Elu layers. The difference between Relu and Elu layers is that when input x<0,           elu(x)=a(exp(x)-1) while relu(x)=0. The network is better than the original one in accuracy and stability.
 
-3)CNNClassifier2.0.
-In this network I replace all Relu layers with Selu layers.
-def selu(x):
-    alpha = 1.6732632423543772848170429916717
-    scale = 1.0507009873554804934193349852946
-    return scale*tf.where(x>=0.0, x, alpha*tf.nn.elu(x))
-This network is no better than the original one.
+  3)CNNClassifier2.0.
+  In this network I replace all Relu layers with Selu layers.
+  def selu(x):
+      alpha = 1.6732632423543772848170429916717
+      scale = 1.0507009873554804934193349852946
+      return scale*tf.where(x>=0.0, x, alpha*tf.nn.elu(x))
+  This network is no better than the original one.
 
-4)CNNClassifier3.0.
-In this network I add a dilated convolution layer with the kernal shaped [8,1,64,128] and rate=4 before the flatten layer. And the flatten layer should have the kernal shaped [-1,15360]. The network is better than the original one in accuracy. It seems that if we increase the output channel we can get better results.
+  4)CNNClassifier3.0.
+  In this network I add a dilated convolution layer with the kernal shaped [8,1,64,128] and rate=4 before the flatten layer. And the       flatten layer should have the kernal shaped [-1,15360]. The network is better than the original one in accuracy. It seems that if we     increase the output channel we can get better results.
 
-5)CNNpredictor_massratio.
-I reproduce Daniel's work of predicting the massratio of binary black holes. 
+  5)CNNpredictor_massratio.
+  I reproduce Daniel's work of predicting the massratio of binary black holes. 
 
-6)CNNpredictor_mass.
-I reproduce Daniel's work of predicting the component masses of binary black holes.
+  6)CNNpredictor_mass.
+  I reproduce Daniel's work of predicting the component masses of binary black holes.
 
-As for training, we use ADAM method as our learning algorithm and start with learning rate=0.001.
-I've tried different training method, such as to train with signals who have a range of SNR or fixed SNR. Training with fixed SNR can get better result at low SNR, but the network would forget information of the high SNR. Training with a range of SNR, say from x to 2, on the other hand, can always keep the network remembering the information of the high SNR, but the accuracy at low SNR is lower than training with fixed SNR. Also, I've tried to start with high SNR and gradually decrease the SNR, or start with low SNR and gradually increase the SNR. From my results the former seems to get better result. Remember when you train you shouldn't decrease the SNR until the cross entropy does not decrease for a time at the current SNR to get the best result.
+  As for training, we use ADAM method as our learning algorithm and start with learning rate=0.001.
+  I've tried different training method, such as to train with signals who have a range of SNR or fixed SNR. Training with fixed SNR can   get better result at low SNR, but the network would forget information of the high SNR. Training with a range of SNR, say from x to 2,   on the other hand, can always keep the network remembering the information of the high SNR, but the accuracy at low SNR is lower than   training with fixed SNR. Also, I've tried to start with high SNR and gradually decrease the SNR, or start with low SNR and gradually     increase the SNR. From my results the former seems to get better result. Remember when you train you shouldn't decrease the SNR until   the cross entropy does not decrease for a time at the current SNR to get the best result.
 
-To monitor the training process, I use Tensorboard to have a look of accuracy and cross entropy of both training and validation set. I monitor the logarithm of the cross entropy because it is too small to notice it's trend.
+  To monitor the training process, I use Tensorboard to have a look of accuracy and cross entropy of both training and validation set. I   monitor the logarithm of the cross entropy because it is too small to notice it's trend.
 
-Results
-For now the best result using fixed SNR is 85% success rate to detect noisy signals with SNR=0.2. If we use a range of SNR to train, then the success rate becomes 75% for noisy signals with SNR=0.2. In this way we can get more than 99% accuracy for SNR>=0.5. 
-Our goal is 90% so still we need some improvements.
-Note here SNR is defined to be the peak value of the pure signal divided by the standard deviation of the noise. 
+  Results
+  For now the best result using fixed SNR is 85% success rate to detect noisy signals with SNR=0.2. If we use a range of SNR to train,     then the success rate becomes 75% for noisy signals with SNR=0.2. In this way we can get more than 99% accuracy for SNR>=0.5. 
+  Our goal is 90% so still we need some improvements.
+  Note here SNR is defined to be the peak value of the pure signal divided by the standard deviation of the noise. 
 
+4. MatchFiltering.
+The traditional way to detect gravitational wave is to use match filters. Let's say we have an enormous amount of match filters, we can compute the correlation of the match filter and the undetected signal(i,e the convolution of the undetected signal and the inverted match filter) to judge whether there is a signal in it or not. However, it's extremely slow to compute convolution on CPU. Here we are trying to use tensorflow to compute convolution on GPU to accelerate the process. By using Tesla P100, we can compute more than 60 times faster than before. When Tensorflow compute convolution it allocates memory to create tensors, so there is an out of memory issue when we have too many filters to compute. To solve this problem we can assign different filters to the kernal each time to compute, and it's not gonna take a lot of time so it's still much faster than computing on CPU.
+
+5. Hyperopt.
 
 
 
